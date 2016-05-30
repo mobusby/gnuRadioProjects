@@ -1,22 +1,12 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python
 ##################################################
-# GNU Radio Python Flow Graph
+# Gnuradio Python Flow Graph
 # Title: Commercial FM
-# Generated: Thu May 19 09:52:48 2016
+# Generated: Sun May 29 20:14:42 2016
 ##################################################
-
-if __name__ == '__main__':
-    import ctypes
-    import sys
-    if sys.platform.startswith('linux'):
-        try:
-            x11 = ctypes.cdll.LoadLibrary('libX11.so')
-            x11.XInitThreads()
-        except:
-            print "Warning: failed to XInitThreads()"
 
 from PyQt4 import Qt
+from PyQt4.QtCore import QObject, pyqtSlot
 from gnuradio import analog
 from gnuradio import audio
 from gnuradio import blocks
@@ -26,14 +16,13 @@ from gnuradio import gr
 from gnuradio import qtgui
 from gnuradio.eng_option import eng_option
 from gnuradio.filter import firdes
-from gnuradio.qtgui import Range, RangeWidget
 from optparse import OptionParser
+import PyQt4.Qwt5 as Qwt
 import osmosdr
 import sip
 import sys
-import time
 
-
+from distutils.version import StrictVersion
 class osmoCommercialFM(gr.top_block, Qt.QWidget):
 
     def __init__(self):
@@ -41,9 +30,9 @@ class osmoCommercialFM(gr.top_block, Qt.QWidget):
         Qt.QWidget.__init__(self)
         self.setWindowTitle("Commercial FM")
         try:
-            self.setWindowIcon(Qt.QIcon.fromTheme('gnuradio-grc'))
+             self.setWindowIcon(Qt.QIcon.fromTheme('gnuradio-grc'))
         except:
-            pass
+             pass
         self.top_scroll_layout = Qt.QVBoxLayout()
         self.setLayout(self.top_scroll_layout)
         self.top_scroll = Qt.QScrollArea()
@@ -58,6 +47,7 @@ class osmoCommercialFM(gr.top_block, Qt.QWidget):
 
         self.settings = Qt.QSettings("GNU Radio", "osmoCommercialFM")
         self.restoreGeometry(self.settings.value("geometry").toByteArray())
+
 
         ##################################################
         # Variables
@@ -79,21 +69,62 @@ class osmoCommercialFM(gr.top_block, Qt.QWidget):
         ##################################################
         # Blocks
         ##################################################
-        self._volume_slider_range = Range(0, 30, 1, 5, 30)
-        self._volume_slider_win = RangeWidget(self._volume_slider_range, self.set_volume_slider, "Volume", "slider", float)
-        self.top_grid_layout.addWidget(self._volume_slider_win, 0,0)
-        self._samp_rate_slider_range = Range(1.0, 2.5, 0.1, 2.0, 250)
-        self._samp_rate_slider_win = RangeWidget(self._samp_rate_slider_range, self.set_samp_rate_slider, "Sample Rate [MHz]", "counter_slider", float)
-        self.top_grid_layout.addWidget(self._samp_rate_slider_win, 1,1)
+        self._volume_slider_layout = Qt.QVBoxLayout()
+        self._volume_slider_label = Qt.QLabel("Volume")
+        self._volume_slider_slider = Qwt.QwtSlider(None, Qt.Qt.Horizontal, Qwt.QwtSlider.BottomScale, Qwt.QwtSlider.BgSlot)
+        self._volume_slider_slider.setRange(0, 30, 1)
+        self._volume_slider_slider.setValue(self.volume_slider)
+        self._volume_slider_slider.setMinimumWidth(30)
+        self._volume_slider_slider.valueChanged.connect(self.set_volume_slider)
+        self._volume_slider_label.setAlignment(Qt.Qt.AlignBottom | Qt.Qt.AlignHCenter)
+        self._volume_slider_layout.addWidget(self._volume_slider_label)
+        self._volume_slider_layout.addWidget(self._volume_slider_slider)
+        self.top_grid_layout.addLayout(self._volume_slider_layout, 0,0)
+        self._samp_rate_slider_layout = Qt.QVBoxLayout()
+        self._samp_rate_slider_tool_bar = Qt.QToolBar(self)
+        self._samp_rate_slider_layout.addWidget(self._samp_rate_slider_tool_bar)
+        self._samp_rate_slider_tool_bar.addWidget(Qt.QLabel("Sample Rate [MHz]"+": "))
+        class qwt_counter_pyslot(Qwt.QwtCounter):
+            def __init__(self, parent=None):
+                Qwt.QwtCounter.__init__(self, parent)
+            @pyqtSlot('double')
+            def setValue(self, value):
+                super(Qwt.QwtCounter, self).setValue(value)
+        self._samp_rate_slider_counter = qwt_counter_pyslot()
+        self._samp_rate_slider_counter.setRange(1.0, 2.5, 0.1)
+        self._samp_rate_slider_counter.setNumButtons(2)
+        self._samp_rate_slider_counter.setValue(self.samp_rate_slider)
+        self._samp_rate_slider_tool_bar.addWidget(self._samp_rate_slider_counter)
+        self._samp_rate_slider_counter.valueChanged.connect(self.set_samp_rate_slider)
+        self._samp_rate_slider_slider = Qwt.QwtSlider(None, Qt.Qt.Horizontal, Qwt.QwtSlider.BottomScale, Qwt.QwtSlider.BgSlot)
+        self._samp_rate_slider_slider.setRange(1.0, 2.5, 0.1)
+        self._samp_rate_slider_slider.setValue(self.samp_rate_slider)
+        self._samp_rate_slider_slider.setMinimumWidth(250)
+        self._samp_rate_slider_slider.valueChanged.connect(self.set_samp_rate_slider)
+        self._samp_rate_slider_layout.addWidget(self._samp_rate_slider_slider)
+        self.top_grid_layout.addLayout(self._samp_rate_slider_layout, 1,1)
         self.rational_resampler_xxx_0 = filter.rational_resampler_fff(
                 interpolation=int(audio_feed_rate),
                 decimation=int(samp_rate),
                 taps=None,
                 fractional_bw=None,
         )
-        self._quadrature_slider_range = Range(1, 1000, 1, 400, 1000)
-        self._quadrature_slider_win = RangeWidget(self._quadrature_slider_range, self.set_quadrature_slider, "quadrature [KHz]", "counter", float)
-        self.top_grid_layout.addWidget(self._quadrature_slider_win, 1,0)
+        self._quadrature_slider_layout = Qt.QHBoxLayout()
+        self._quadrature_slider_layout.addWidget(Qt.QLabel("quadrature [KHz]"+": "))
+        class qwt_counter_pyslot(Qwt.QwtCounter):
+            def __init__(self, parent=None):
+                Qwt.QwtCounter.__init__(self, parent)
+            @pyqtSlot('double')
+            def setValue(self, value):
+                super(Qwt.QwtCounter, self).setValue(value)
+        self._quadrature_slider_counter = qwt_counter_pyslot()
+        self._quadrature_slider_counter.setRange(1, 1000, 1)
+        self._quadrature_slider_counter.setNumButtons(2)
+        self._quadrature_slider_counter.setMinimumWidth(1000)
+        self._quadrature_slider_counter.setValue(self.quadrature_slider)
+        self._quadrature_slider_layout.addWidget(self._quadrature_slider_counter)
+        self._quadrature_slider_counter.valueChanged.connect(self.set_quadrature_slider)
+        self.top_grid_layout.addLayout(self._quadrature_slider_layout, 1,0)
         self.qtgui_freq_sink_x_1 = qtgui.freq_sink_c(
         	1024, #size
         	firdes.WIN_BLACKMAN_hARRIS, #wintype
@@ -104,17 +135,9 @@ class osmoCommercialFM(gr.top_block, Qt.QWidget):
         )
         self.qtgui_freq_sink_x_1.set_update_time(0.10)
         self.qtgui_freq_sink_x_1.set_y_axis(-160, 10)
-        self.qtgui_freq_sink_x_1.set_trigger_mode(qtgui.TRIG_MODE_FREE, 0.0, 0, "")
         self.qtgui_freq_sink_x_1.enable_autoscale(False)
         self.qtgui_freq_sink_x_1.enable_grid(True)
         self.qtgui_freq_sink_x_1.set_fft_average(1.0)
-        self.qtgui_freq_sink_x_1.enable_control_panel(True)
-        
-        if not True:
-          self.qtgui_freq_sink_x_1.disable_legend()
-        
-        if "complex" == "float" or "complex" == "msg_float":
-          self.qtgui_freq_sink_x_1.set_plot_pos_half(not True)
         
         labels = ["", "", "", "", "",
                   "", "", "", "", ""]
@@ -145,17 +168,9 @@ class osmoCommercialFM(gr.top_block, Qt.QWidget):
         )
         self.qtgui_freq_sink_x_0.set_update_time(0.10)
         self.qtgui_freq_sink_x_0.set_y_axis(-120, 10)
-        self.qtgui_freq_sink_x_0.set_trigger_mode(qtgui.TRIG_MODE_FREE, 0.0, 0, "")
         self.qtgui_freq_sink_x_0.enable_autoscale(False)
         self.qtgui_freq_sink_x_0.enable_grid(True)
         self.qtgui_freq_sink_x_0.set_fft_average(1.0)
-        self.qtgui_freq_sink_x_0.enable_control_panel(True)
-        
-        if not True:
-          self.qtgui_freq_sink_x_0.disable_legend()
-        
-        if "complex" == "float" or "complex" == "msg_float":
-          self.qtgui_freq_sink_x_0.set_plot_pos_half(not True)
         
         labels = ["", "", "", "", "",
                   "", "", "", "", ""]
@@ -191,15 +206,75 @@ class osmoCommercialFM(gr.top_block, Qt.QWidget):
           
         self.low_pass_filter_0 = filter.fir_filter_ccf(filter_decimation, firdes.low_pass(
         	1, samp_rate, filter_cutoff, filter_transition, firdes.WIN_HAMMING, 6.76))
-        self._freq_slider_range = Range(88.1, 107.9, .2, 92.9, 200)
-        self._freq_slider_win = RangeWidget(self._freq_slider_range, self.set_freq_slider, "Frequency [MHz]", "counter_slider", float)
-        self.top_grid_layout.addWidget(self._freq_slider_win, 0,1)
-        self._filter_transition_slider_range = Range(1, 500, 1, 20, 500)
-        self._filter_transition_slider_win = RangeWidget(self._filter_transition_slider_range, self.set_filter_transition_slider, "Filter Transition [KHz]", "counter_slider", float)
-        self.top_grid_layout.addWidget(self._filter_transition_slider_win, 2,1)
-        self._filter_cutoff_slider_range = Range(1, 500, 1, 80, 500)
-        self._filter_cutoff_slider_win = RangeWidget(self._filter_cutoff_slider_range, self.set_filter_cutoff_slider, "Filter Cutoff [KHz]", "counter_slider", float)
-        self.top_grid_layout.addWidget(self._filter_cutoff_slider_win, 2,0)
+        self._freq_slider_layout = Qt.QVBoxLayout()
+        self._freq_slider_tool_bar = Qt.QToolBar(self)
+        self._freq_slider_layout.addWidget(self._freq_slider_tool_bar)
+        self._freq_slider_tool_bar.addWidget(Qt.QLabel("Frequency [MHz]"+": "))
+        class qwt_counter_pyslot(Qwt.QwtCounter):
+            def __init__(self, parent=None):
+                Qwt.QwtCounter.__init__(self, parent)
+            @pyqtSlot('double')
+            def setValue(self, value):
+                super(Qwt.QwtCounter, self).setValue(value)
+        self._freq_slider_counter = qwt_counter_pyslot()
+        self._freq_slider_counter.setRange(88.1, 107.9, .2)
+        self._freq_slider_counter.setNumButtons(2)
+        self._freq_slider_counter.setValue(self.freq_slider)
+        self._freq_slider_tool_bar.addWidget(self._freq_slider_counter)
+        self._freq_slider_counter.valueChanged.connect(self.set_freq_slider)
+        self._freq_slider_slider = Qwt.QwtSlider(None, Qt.Qt.Horizontal, Qwt.QwtSlider.BottomScale, Qwt.QwtSlider.BgSlot)
+        self._freq_slider_slider.setRange(88.1, 107.9, .2)
+        self._freq_slider_slider.setValue(self.freq_slider)
+        self._freq_slider_slider.setMinimumWidth(200)
+        self._freq_slider_slider.valueChanged.connect(self.set_freq_slider)
+        self._freq_slider_layout.addWidget(self._freq_slider_slider)
+        self.top_grid_layout.addLayout(self._freq_slider_layout, 0,1)
+        self._filter_transition_slider_layout = Qt.QVBoxLayout()
+        self._filter_transition_slider_tool_bar = Qt.QToolBar(self)
+        self._filter_transition_slider_layout.addWidget(self._filter_transition_slider_tool_bar)
+        self._filter_transition_slider_tool_bar.addWidget(Qt.QLabel("Filter Transition [KHz]"+": "))
+        class qwt_counter_pyslot(Qwt.QwtCounter):
+            def __init__(self, parent=None):
+                Qwt.QwtCounter.__init__(self, parent)
+            @pyqtSlot('double')
+            def setValue(self, value):
+                super(Qwt.QwtCounter, self).setValue(value)
+        self._filter_transition_slider_counter = qwt_counter_pyslot()
+        self._filter_transition_slider_counter.setRange(1, 500, 1)
+        self._filter_transition_slider_counter.setNumButtons(2)
+        self._filter_transition_slider_counter.setValue(self.filter_transition_slider)
+        self._filter_transition_slider_tool_bar.addWidget(self._filter_transition_slider_counter)
+        self._filter_transition_slider_counter.valueChanged.connect(self.set_filter_transition_slider)
+        self._filter_transition_slider_slider = Qwt.QwtSlider(None, Qt.Qt.Horizontal, Qwt.QwtSlider.BottomScale, Qwt.QwtSlider.BgSlot)
+        self._filter_transition_slider_slider.setRange(1, 500, 1)
+        self._filter_transition_slider_slider.setValue(self.filter_transition_slider)
+        self._filter_transition_slider_slider.setMinimumWidth(500)
+        self._filter_transition_slider_slider.valueChanged.connect(self.set_filter_transition_slider)
+        self._filter_transition_slider_layout.addWidget(self._filter_transition_slider_slider)
+        self.top_grid_layout.addLayout(self._filter_transition_slider_layout, 2,1)
+        self._filter_cutoff_slider_layout = Qt.QVBoxLayout()
+        self._filter_cutoff_slider_tool_bar = Qt.QToolBar(self)
+        self._filter_cutoff_slider_layout.addWidget(self._filter_cutoff_slider_tool_bar)
+        self._filter_cutoff_slider_tool_bar.addWidget(Qt.QLabel("Filter Cutoff [KHz]"+": "))
+        class qwt_counter_pyslot(Qwt.QwtCounter):
+            def __init__(self, parent=None):
+                Qwt.QwtCounter.__init__(self, parent)
+            @pyqtSlot('double')
+            def setValue(self, value):
+                super(Qwt.QwtCounter, self).setValue(value)
+        self._filter_cutoff_slider_counter = qwt_counter_pyslot()
+        self._filter_cutoff_slider_counter.setRange(1, 500, 1)
+        self._filter_cutoff_slider_counter.setNumButtons(2)
+        self._filter_cutoff_slider_counter.setValue(self.filter_cutoff_slider)
+        self._filter_cutoff_slider_tool_bar.addWidget(self._filter_cutoff_slider_counter)
+        self._filter_cutoff_slider_counter.valueChanged.connect(self.set_filter_cutoff_slider)
+        self._filter_cutoff_slider_slider = Qwt.QwtSlider(None, Qt.Qt.Horizontal, Qwt.QwtSlider.BottomScale, Qwt.QwtSlider.BgSlot)
+        self._filter_cutoff_slider_slider.setRange(1, 500, 1)
+        self._filter_cutoff_slider_slider.setValue(self.filter_cutoff_slider)
+        self._filter_cutoff_slider_slider.setMinimumWidth(500)
+        self._filter_cutoff_slider_slider.valueChanged.connect(self.set_filter_cutoff_slider)
+        self._filter_cutoff_slider_layout.addWidget(self._filter_cutoff_slider_slider)
+        self.top_grid_layout.addLayout(self._filter_cutoff_slider_layout, 2,0)
         self.blocks_multiply_const_vxx_0 = blocks.multiply_const_vff((volume, ))
         self.audio_sink_0 = audio.sink(int(audio_feed_rate), "", True)
         self.analog_wfm_rcv_0 = analog.wfm_rcv(
@@ -210,19 +285,19 @@ class osmoCommercialFM(gr.top_block, Qt.QWidget):
         ##################################################
         # Connections
         ##################################################
-        self.connect((self.analog_wfm_rcv_0, 0), (self.rational_resampler_xxx_0, 0))    
-        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.audio_sink_0, 0))    
-        self.connect((self.low_pass_filter_0, 0), (self.analog_wfm_rcv_0, 0))    
-        self.connect((self.low_pass_filter_0, 0), (self.qtgui_freq_sink_x_1, 0))    
-        self.connect((self.osmosdr_source_0, 0), (self.low_pass_filter_0, 0))    
-        self.connect((self.osmosdr_source_0, 0), (self.qtgui_freq_sink_x_0, 0))    
-        self.connect((self.rational_resampler_xxx_0, 0), (self.blocks_multiply_const_vxx_0, 0))    
+        self.connect((self.analog_wfm_rcv_0, 0), (self.rational_resampler_xxx_0, 0))
+        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.audio_sink_0, 0))
+        self.connect((self.low_pass_filter_0, 0), (self.analog_wfm_rcv_0, 0))
+        self.connect((self.low_pass_filter_0, 0), (self.qtgui_freq_sink_x_1, 0))
+        self.connect((self.osmosdr_source_0, 0), (self.low_pass_filter_0, 0))
+        self.connect((self.osmosdr_source_0, 0), (self.qtgui_freq_sink_x_0, 0))
+        self.connect((self.rational_resampler_xxx_0, 0), (self.blocks_multiply_const_vxx_0, 0))
+
 
     def closeEvent(self, event):
         self.settings = Qt.QSettings("GNU Radio", "osmoCommercialFM")
         self.settings.setValue("geometry", self.saveGeometry())
         event.accept()
-
 
     def get_volume_slider(self):
         return self.volume_slider
@@ -230,6 +305,7 @@ class osmoCommercialFM(gr.top_block, Qt.QWidget):
     def set_volume_slider(self, volume_slider):
         self.volume_slider = volume_slider
         self.set_volume(self.volume_slider)
+        Qt.QMetaObject.invokeMethod(self._volume_slider_slider, "setValue", Qt.Q_ARG("double", self.volume_slider))
 
     def get_samp_rate_slider(self):
         return self.samp_rate_slider
@@ -237,6 +313,8 @@ class osmoCommercialFM(gr.top_block, Qt.QWidget):
     def set_samp_rate_slider(self, samp_rate_slider):
         self.samp_rate_slider = samp_rate_slider
         self.set_samp_rate(self.samp_rate_slider * 1e6)
+        Qt.QMetaObject.invokeMethod(self._samp_rate_slider_counter, "setValue", Qt.Q_ARG("double", self.samp_rate_slider))
+        Qt.QMetaObject.invokeMethod(self._samp_rate_slider_slider, "setValue", Qt.Q_ARG("double", self.samp_rate_slider))
 
     def get_freq_slider(self):
         return self.freq_slider
@@ -244,6 +322,8 @@ class osmoCommercialFM(gr.top_block, Qt.QWidget):
     def set_freq_slider(self, freq_slider):
         self.freq_slider = freq_slider
         self.set_freq(self.freq_slider * 1e6)
+        Qt.QMetaObject.invokeMethod(self._freq_slider_counter, "setValue", Qt.Q_ARG("double", self.freq_slider))
+        Qt.QMetaObject.invokeMethod(self._freq_slider_slider, "setValue", Qt.Q_ARG("double", self.freq_slider))
 
     def get_filter_transition_slider(self):
         return self.filter_transition_slider
@@ -251,6 +331,8 @@ class osmoCommercialFM(gr.top_block, Qt.QWidget):
     def set_filter_transition_slider(self, filter_transition_slider):
         self.filter_transition_slider = filter_transition_slider
         self.set_filter_transition(self.filter_transition_slider * 1e3)
+        Qt.QMetaObject.invokeMethod(self._filter_transition_slider_counter, "setValue", Qt.Q_ARG("double", self.filter_transition_slider))
+        Qt.QMetaObject.invokeMethod(self._filter_transition_slider_slider, "setValue", Qt.Q_ARG("double", self.filter_transition_slider))
 
     def get_filter_cutoff_slider(self):
         return self.filter_cutoff_slider
@@ -258,6 +340,8 @@ class osmoCommercialFM(gr.top_block, Qt.QWidget):
     def set_filter_cutoff_slider(self, filter_cutoff_slider):
         self.filter_cutoff_slider = filter_cutoff_slider
         self.set_filter_cutoff(self.filter_cutoff_slider * 1e3)
+        Qt.QMetaObject.invokeMethod(self._filter_cutoff_slider_counter, "setValue", Qt.Q_ARG("double", self.filter_cutoff_slider))
+        Qt.QMetaObject.invokeMethod(self._filter_cutoff_slider_slider, "setValue", Qt.Q_ARG("double", self.filter_cutoff_slider))
 
     def get_volume(self):
         return self.volume
@@ -281,6 +365,7 @@ class osmoCommercialFM(gr.top_block, Qt.QWidget):
 
     def set_quadrature_slider(self, quadrature_slider):
         self.quadrature_slider = quadrature_slider
+        Qt.QMetaObject.invokeMethod(self._quadrature_slider_counter, "setValue", Qt.Q_ARG("double", self.quadrature_slider))
 
     def get_freq(self):
         return self.freq
@@ -317,25 +402,26 @@ class osmoCommercialFM(gr.top_block, Qt.QWidget):
     def set_audio_feed_rate(self, audio_feed_rate):
         self.audio_feed_rate = audio_feed_rate
 
-
-def main(top_block_cls=osmoCommercialFM, options=None):
-
-    from distutils.version import StrictVersion
-    if StrictVersion(Qt.qVersion()) >= StrictVersion("4.5.0"):
-        style = gr.prefs().get_string('qtgui', 'style', 'raster')
-        Qt.QApplication.setGraphicsSystem(style)
+if __name__ == '__main__':
+    import ctypes
+    import sys
+    if sys.platform.startswith('linux'):
+        try:
+            x11 = ctypes.cdll.LoadLibrary('libX11.so')
+            x11.XInitThreads()
+        except:
+            print "Warning: failed to XInitThreads()"
+    parser = OptionParser(option_class=eng_option, usage="%prog: [options]")
+    (options, args) = parser.parse_args()
+    if(StrictVersion(Qt.qVersion()) >= StrictVersion("4.5.0")):
+        Qt.QApplication.setGraphicsSystem(gr.prefs().get_string('qtgui','style','raster'))
     qapp = Qt.QApplication(sys.argv)
-
-    tb = top_block_cls()
+    tb = osmoCommercialFM()
     tb.start()
     tb.show()
-
     def quitting():
         tb.stop()
         tb.wait()
     qapp.connect(qapp, Qt.SIGNAL("aboutToQuit()"), quitting)
     qapp.exec_()
-
-
-if __name__ == '__main__':
-    main()
+    tb = None #to clean up Qt widgets
